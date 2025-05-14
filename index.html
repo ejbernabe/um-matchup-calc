@@ -2,11 +2,16 @@
 <html>
 <head>
     <title>Unmatched Matchup Calculator</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.0/css/dataTables.dataTables.css" />
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
         select, button { padding: 5px; margin: 10px 0; }
         ul { list-style-type: none; padding: 0; }
         li { margin: 5px 0; }
+
+        div.dataTables_filter {
+            text-align: left !important;
+        }
     </style>
 </head>
 <body>
@@ -14,16 +19,21 @@
     <text>CSV based from March 12, 2025 01:08 PM PHT</text>
 
     <div id="heroSelectors"></div>
+    <button onclick="generateMatchupScores()">Submit Lineup</button>
+    <button onclick="location.reload()">Reset</button>
 
-  <!-- <label for="columnSelect">Choose a hero:</label>
-  <select id="columnSelect" class="columnSelect"></select> -->
-  <!-- <button onclick="displayColumn()">Show Values</button> -->
-    <button onclick="submitLineup()">Submit Lineup</button>
-    <ul id="result"></ul>
+    <br>
+    <input onchange="generateMatchupScores()" type="checkbox" id="ignoreNA">Include N/A?
+    <br>
+    <div id="matchupScores"></div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.0/js/dataTables.js"></script>
     <script>
         let headers = [];
         let data = [];
+        let bestMatchups = [];
+        let worstMatchups = [];
 
         // Automatically fetch CSV on page load
         window.onload = () => {
@@ -37,7 +47,6 @@
             .then(csvText => {
                 parseCSV(csvText);
                 populateDropdown();
-                // displayColumn();
             })
             .catch(error => {
                 console.error("Error loading CSV:", error);
@@ -89,25 +98,126 @@
 
             }
         }
-        
-        function displayColumn() {
-            const selectedColumn = document.getElementById("columnSelect").value;
-            const index = headers.indexOf(selectedColumn);
-            const result = document.getElementById("result");
-            result.innerHTML = "";
 
-            if (index === -1) return;
+        function generateMatchupScores() {
+            bestMatchups = [];
+            worstMatchups = [];
+            const selectedHeroes = Array.from(document.querySelectorAll('.heroSelect'))
+                .map(select => select.value)
+                .filter(value => value && value !== '-');
+
+            if (selectedHeroes.length === 0) {
+                alert("Please select at least one hero.");
+                return;
+            }
+
+            const ignoreNA = document.getElementById('ignoreNA').checked;
+
+            const tableContainer = document.getElementById("matchupScores");
+            tableContainer.innerHTML = ""; // Clear existing table
+
+            // if ($.fn.DataTable.isDataTable('#matchupTable')) {
+            //     $('#matchupTable').DataTable().destroy();
+            //     $('#matchupTable').remove(); // Remove old table from DOM
+            // }
+
+            const table = document.createElement("table");
+            table.id = "matchupTable";
+            table.style.borderCollapse = "collapse";
+            table.style.marginTop = "20px";
+
+            const cellStyle = "border: 1px solid #ccc; padding: 5px;";
+
+            // Create table header
+            const thead = document.createElement("thead");
+            const headerRow = document.createElement("tr");
+
+            const emptyTh = document.createElement("th");
+            emptyTh.style = cellStyle;
+            headerRow.appendChild(emptyTh);
+
+            selectedHeroes.forEach(hero => {
+                const th = document.createElement("th");
+                th.textContent = hero;
+                th.style = cellStyle;
+                headerRow.appendChild(th);
+            });
+
+            const totalTh = document.createElement("th");
+            totalTh.textContent = "Total Matchup Score (over 500)";
+            totalTh.style = cellStyle;
+            headerRow.appendChild(totalTh);
+
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create table body
+            const tbody = document.createElement("tbody");
 
             data.forEach(row => {
-                const label = row[0];
-                const value = row[index];
-                const li = document.createElement("li");
-                li.textContent = `${label}: ${value}`;
-                result.appendChild(li);
+                const category = row[0];
+                const tr = document.createElement("tr");
+
+                const labelTd = document.createElement("td");
+                labelTd.textContent = category;
+                labelTd.style = cellStyle + " font-weight: bold;";
+                tr.appendChild(labelTd);
+
+                let total = 0;
+
+                selectedHeroes.forEach(hero => {
+                    const td = document.createElement("td");
+                    const columnIndex = headers.indexOf(hero);
+                    const val = parseInt(row[columnIndex], 10);
+
+                    td.textContent = isNaN(val) ? "-" : val;
+                    td.style = cellStyle;
+                    tr.appendChild(td);
+
+                    // Exclude -2 always, and 0 if checkbox is checked
+                    if (!isNaN(val) && val !== -2 && (!ignoreNA || val !== 0)) {
+                        total += val;
+                    }
+                });
+
+                const totalTd = document.createElement("td");
+                totalTd.textContent = total;
+                totalTd.style = cellStyle + " font-weight: bold; background-color: #f9f9f9;";
+                tr.appendChild(totalTd);
+
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(tbody);
+            tableContainer.appendChild(table);
+
+            $(document).ready(function() {
+                if ($.fn.DataTable.isDataTable('#matchupTable')) {
+                    $('#matchupTable').DataTable().destroy(); // Destroy previous DataTable instance
+                }
+
+                $('#matchupTable').DataTable({
+                    dom: '<"top"f>rt<"bottom"ip><"clear">',
+                    columnDefs: [
+                        {
+                            targets: 0,
+                            searchable: true,
+                            orderable: false
+                        },
+                        {
+                            targets: 1,
+                            searchable: false,
+                            orderable: true
+                        },
+                    ],
+                    language: {
+                        searchPlaceholder: "Search Hero Name...",
+                        search: ""
+                    }
+                });
             });
         }
-    
-        
+
     </script>
 </body>
 </html>
