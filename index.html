@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unmatched Matchup Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        select, button { padding: 5px; margin: 10px 0; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h2>Unmatched Matchup Calculator</h2>
+    <text>CSV based from March 12, 2025 01:08 PM PHT</text>
+
+    <div id="heroSelectors"></div>
+
+  <!-- <label for="columnSelect">Choose a hero:</label>
+  <select id="columnSelect" class="columnSelect"></select> -->
+  <!-- <button onclick="displayColumn()">Show Values</button> -->
+    <button onclick="submitLineup()">Submit Lineup</button>
+    <ul id="result"></ul>
+
+    <script>
+        let headers = [];
+        let data = [];
+
+        // Automatically fetch CSV on page load
+        window.onload = () => {
+            fetch('test.csv')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("CSV file not found or inaccessible.");
+                }
+                return response.text();
+            })
+            .then(csvText => {
+                parseCSV(csvText);
+                populateDropdown();
+                // displayColumn();
+            })
+            .catch(error => {
+                console.error("Error loading CSV:", error);
+            });
+        };
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n').map(line => line.split(','));
+            headers = lines[0];
+            data = lines.slice(1);
+        }
+
+        function populateHeroSelect(id) {
+            const select = document.getElementById(id);
+            select.innerHTML = '';
+
+            // Add default blank option
+            const defaultOption = document.createElement("option");
+            defaultOption.value = '';
+            defaultOption.textContent = '-';
+            select.appendChild(defaultOption);
+
+            // Populate remaining options
+            headers.slice(1).forEach(header => {
+                const option = document.createElement("option");
+                option.value = header;
+                option.textContent = header;
+                select.appendChild(option);
+            });
+        }
+
+        function populateDropdown() {
+            const container = document.getElementById('heroSelectors');
+
+            for(let i=0;i<5;i++) {
+                const label = document.createElement("label");
+                label.setAttribute("for", `heroSelect${i}`);
+                label.textContent = `Hero #${i+1}: `;
+
+                const select = document.createElement("select");
+                select.id = `heroSelect${i}`;
+                select.className = `heroSelect`;
+
+                container.appendChild(label);
+                container.appendChild(select);
+                container.appendChild(document.createElement("br"));
+
+                populateHeroSelect(`heroSelect${i}`);
+
+            }
+        }
+        
+        function displayColumn() {
+            const selectedColumn = document.getElementById("columnSelect").value;
+            const index = headers.indexOf(selectedColumn);
+            const result = document.getElementById("result");
+            result.innerHTML = "";
+
+            if (index === -1) return;
+
+            data.forEach(row => {
+                const label = row[0];
+                const value = row[index];
+                const li = document.createElement("li");
+                li.textContent = `${label}: ${value}`;
+                result.appendChild(li);
+            });
+        }
+    
+        
+    </script>
+</body>
+</html>
